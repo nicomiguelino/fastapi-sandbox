@@ -11,5 +11,8 @@ if [[ ! "$ENVIRONMENT" =~ ^(development|production)$ ]]; then
 fi
 
 if [[ "$ENVIRONMENT" == 'development' ]]; then
-    fastapi run --host "$HOST" src/main.py
+    fastapi run \
+        --host "$HOST" \
+        --reload \
+        src/main.py
 fi

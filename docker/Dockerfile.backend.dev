@@ -6,6 +6,8 @@ ARG GROUP_ID
 ARG USER_NAME
 
 RUN useradd -u ${USER_ID} --create-home ${USER_NAME}
+RUN apt-get update -y && apt-get install -y \
+    less
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1 \
