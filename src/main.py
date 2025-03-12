@@ -1,38 +1,56 @@
-from fastapi import FastAPI
+from typing import Annotated
+
+from fastapi import (
+    Depends,
+    FastAPI,
+    Query,
+)
 from pydantic import BaseModel
+from sqlmodel import (
+    create_engine,
+    select,
+    Session,
+    SQLModel,
+)
+
+from models import Hero
+
+
+sqlite_file_name = 'db.sqlite3'
+sqlite_url = f'sqlite:///{sqlite_file_name}'
+
+connect_args = {'check_same_thread': False}
+engine = create_engine(sqlite_url, connect_args=connect_args)
+
+
+def create_db_and_tables():
+    SQLModel.metadata.create_all(engine)
+
+
+def get_session():
+    with Session(engine) as session:
+        yield session
+
+
+
+SessionDep = Annotated[Session, Depends(get_session)]
 
 
 app = FastAPI()
 
 
-class Item(BaseModel):
-    name: str
-    price: float
-    is_offer: bool = False
+@app.on_event('startup')
+def on_startup():
+    create_db_and_tables()
 
 
-@app.get('/')
-async def read_root():
-    return {
-        'Hello': 'Milky Way'
-    }
-
-
-@app.get('/items/{item_id}')
-async def read_item(item_id: int, q: str | None = None):
-    return {
-        'item_id': item_id,
-        'q': q,
-    }
-
-
-@app.put('/items/{item_id}')
-def update_item(
-    item_id: int,
-    item: Item,
-    q: str | None = None,
-):
-    return {
-        'item_id': item_id,
-        'item': item,
-    }
+@app.get("/heroes/")
+def read_heroes(
+    session: SessionDep,
+    offset: int = 0,
+    limit: Annotated[int, Query(le=100)] = 100,
+) -> list[Hero]:
+    heroes = session.exec(
+        select(Hero).offset(offset).limit(limit)
+    ).all()
+    return heroes
