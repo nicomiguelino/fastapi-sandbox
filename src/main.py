@@ -3,9 +3,9 @@ from typing import Annotated
 from fastapi import (
     Depends,
     FastAPI,
+    HTTPException,
     Query,
 )
-from pydantic import BaseModel
 from sqlmodel import (
     create_engine,
     select,
@@ -54,3 +54,24 @@ def read_heroes(
         select(Hero).offset(offset).limit(limit)
     ).all()
     return heroes
+
+
+@app.post('/heroes/')
+def create_hero(
+    session: SessionDep,
+    hero: Hero,
+) -> Hero:
+    session.add(hero)
+    session.commit()
+    session.refresh(hero)
+    return hero
+
+
+@app.delete("/heroes/{hero_id}")
+def delete_hero(hero_id: int, session: SessionDep):
+    hero = session.get(Hero, hero_id)
+    if not hero:
+        raise HTTPException(status_code=404, detail="Hero not found")
+    session.delete(hero)
+    session.commit()
+    return {"ok": True}
